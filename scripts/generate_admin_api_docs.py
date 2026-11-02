@@ -345,8 +345,8 @@ def endpoint_notes(endpoint: dict[str, Any]) -> list[str]:
         )
     if path.endswith("/pipelines/{appname}/runs/") and method == "POST":
         notes.append(
-            "This endpoint accepts an optional JSON request body. If the app’s `pipeline()` "
-            "callable declares a `data` parameter, the decoded body is passed as `data`. "
+            "This endpoint accepts an optional JSON request body. The decoded body is passed "
+            "to the app’s `pipeline()` as `data` (`None` if the body is empty). "
             "A body that is not valid JSON fails with `400`."
         )
     if path.endswith("/pipelines/{appname}/runs/"):

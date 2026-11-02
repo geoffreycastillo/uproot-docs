@@ -298,7 +298,7 @@ Get player metadata needed to reproduce the admin multiview.
 
 ### `GET /admin/api/v1/sessions/{sname}/online-players/`
 
-Get online status and info for all players in a session.
+Get last-seen times and info for all players in a session.
 
 **Path parameters**:
 

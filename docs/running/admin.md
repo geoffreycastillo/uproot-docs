@@ -86,7 +86,7 @@ The session detail page (`/admin/session/{sname}/`) is your control center durin
 The session page shows all players with their current status:
 
 - **current page:** which page each player is on;
-- **online status:** whether the player is currently connected;
+- **last seen:** when the player’s browser last reported in;
 - **progress:** how far through the experiment each player is.
 
 ### Player actions

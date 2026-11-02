@@ -53,6 +53,23 @@ async def handle_dropout(player):
 
 `move_to_end(player)` advances the player past all remaining pages. If they return, they will see the end page instead of being stuck on a wait page that blocks other players.
 
+## Stopping the watcher
+
+Participants who have finished often just close the tab on your last page, without clicking through to the end page. uproot cannot tell them apart from someone who left halfway: Unless you say otherwise, anyone who leaves before the end page counts as a dropout. The handler runs, and `player._uproot_dropout` becomes `True`. Your data would then show dropouts who actually completed your experiment.
+
+To prevent this, call `stop_watching_for_dropout` on the first page where leaving no longer counts as dropping out. Use [`before_once`](../reference/page-methods.md#before_once), which runs when the player first reaches that page:
+
+```python
+class Results(Page):
+    @classmethod
+    def before_once(page, player):
+        stop_watching_for_dropout(player)
+```
+
+From then on, the player can leave without consequences: No handler runs, and `player._uproot_dropout` stays `False`. This ends all of the player’s watchers, and they stay off even if the server restarts.
+
+Only stop watching once the player has nothing left to do. If they can still make decisions after this page, a real dropout would go unnoticed.
+
 ## Marking dropouts manually
 
 From the admin interface, select players and use the **Mark as dropout** action.
@@ -69,6 +86,8 @@ mark_dropout(player.pid)
 `mark_dropout` marks the player for the dropout watcher. Register a watcher if
 you want a handler to run; the function alone does not move the player or call
 the handler immediately.
+
+A player without a watcher, such as a player after `stop_watching_for_dropout`, still gets `player._uproot_dropout = True`, but no handler runs.
 
 ## Handling dropouts in group experiments
 
@@ -88,6 +107,13 @@ Use a boolean `group.dropped` flag as the single source of truth. When any dropo
 class C:
     TIMEOUT = 60       # seconds to make a decision
     SYNC_TIMEOUT = 90  # seconds to wait at sync points
+    PAYOFF_MATRIX = {
+        # (you cooperate, other cooperates): your payoff
+        (True, True): 10,
+        (True, False): 0,
+        (False, True): 15,
+        (False, False): 3,
+    }
 
 
 def drop_group(group, culprit):
@@ -191,8 +217,12 @@ class Sync(SynchronizingWait):
     def all_here(page, group):
         if group.get("dropped"):
             return
+
         for player in group.players:
-            # ... compute and assign payoffs ...
+            player.payoff = C.PAYOFF_MATRIX[
+                player.cooperate,
+                player.other_in_group.cooperate,
+            ]
 ```
 
 The guard in `all_here` prevents payoff calculation for dropped groups.
@@ -215,10 +245,20 @@ Create a terminal page that tells participants what happened. Distinguish betwee
 {% endblock main %}
 ```
 
-In your Python code, the Dropped page moves the player to the end after they see the message:
+In your Python code, the Dropped page uses [`show`](../reference/page-methods.md#show) to appear only if the group was dropped. Everyone else skips it and goes on to the end page.
+
+The page also [stops the watcher](#stopping-the-watcher), because a participant on this page has nothing left to do. Without this, closing the tab here would run `handle_dropout` and record an innocent partner as timed out. Finally, it moves the player to the end after they see the message:
 
 ```python
 class Dropped(Page):
+    @classmethod
+    def show(page, player):
+        return player.group.get("dropped")
+
+    @classmethod
+    def before_once(page, player):
+        stop_watching_for_dropout(player)
+
     @classmethod
     def after_once(page, player):
         move_to_end(player)
@@ -246,7 +286,14 @@ class Results(Page):
     def before_once(page, player):
         if player.group.get("dropped"):
             move_to_page(player, Dropped)
+        else:
+            stop_watching_for_dropout(player)
 ```
+
+Results is also where participants finish, so the `else` branch [stops the watcher](#stopping-the-watcher). Without it, a participant who closes the tab while reading their results would drop a pair that has already finished, and you would [exclude that pair’s complete data](#excluding-dropped-groups-from-data). If decisions still follow Results, call `stop_watching_for_dropout` on the last of those pages instead.
+
+!!! warning "Every participant needs a way to finish"
+    A participant who leaves any page before the end page counts as a dropout, even on a page with nothing left to do. Make sure that every path through your experiment ends with `stop_watching_for_dropout` or `move_to_end`.
 
 ### Excluding dropped groups from data
 
@@ -324,6 +371,7 @@ watch_for_dropout(player, handle_dropout, tolerance=120.0)
 | Feature | Purpose |
 |---------|---------|
 | `watch_for_dropout(player, handler, tolerance=30.0)` | Monitor a player for disconnection |
+| `stop_watching_for_dropout(player)` | End all of a player’s watchers once they have finished |
 | `move_to_end(player)` | Move player past all remaining pages |
 | `move_to_page(player, PageClass)` | Redirect a player to a specific page |
 | `mark_dropout(pid)` | Manually mark a player as dropout |
@@ -383,12 +431,6 @@ class Negotiation(DroppableMixin, Page):
     fields = dict(
         offer=IntegerField(label="Your offer", min=0, max=100),
     )
-
-
-class Results(DroppableMixin, Page):
-    @classmethod
-    def templatevars(page, player):
-        return dict(payoff=player.payoff)
 ```
 
 Each page now inherits the timeout and dropout guard automatically. You still define `fields`, `templatevars`, and any other page-specific methods as usual; they sit alongside the inherited ones without conflict.
@@ -406,7 +448,7 @@ class LongDecision(DroppableMixin, Page):
 
 ### Pages that only need the guard
 
-Some pages (like `Results`) do not need a timeout—they have no form to submit. The mixin still works: `timeout` returning a value on a page without fields is harmless. But if you prefer, you can skip the mixin and add just the guard directly:
+Some pages do not need a timeout—they have no form to submit. The mixin still works on them: `timeout` returning a value on a page without fields is harmless. `Results` needs more than the mixin offers, though, because it also has to [stop the watcher](#stopping-the-watcher). So skip the mixin here and write the guard directly:
 
 ```python
 class Results(Page):
@@ -414,6 +456,12 @@ class Results(Page):
     def before_once(page, player):
         if player.group.get("dropped"):
             move_to_page(player, Dropped)
+        else:
+            stop_watching_for_dropout(player)
+
+    @classmethod
+    def templatevars(page, player):
+        return dict(payoff=player.payoff)
 ```
 
-Either approach is fine. The mixin is most valuable when you have many decision pages that all share the same timeout and dropout logic.
+The mixin is most valuable when you have many decision pages that all share the same timeout and dropout logic.

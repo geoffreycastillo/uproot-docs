@@ -213,6 +213,14 @@ Monitor a player for disconnection and call a handler when they go offline.
 watch_for_dropout(player, handler, tolerance=30.0)
 ```
 
+### `stop_watching_for_dropout`
+
+End all of a player’s dropout watchers, for example once they have finished. See [Stopping the watcher](../advanced/dropouts.md#stopping-the-watcher).
+
+```python
+stop_watching_for_dropout(player)
+```
+
 ### `mark_dropout`
 
 Add a player to the manual dropout set used by the dropout watcher.

@@ -186,6 +186,7 @@ Using a context manager is always safe, even when not strictly required.
 
 ### Dropout handling
 - `watch_for_dropout(player, handler, tolerance=30.0)` — monitor for disconnection
+- `stop_watching_for_dropout(player)` — end all of a player’s watchers once they have finished; otherwise, leaving before the end page counts as a dropout
 - `mark_dropout(pid)` — manual dropout
 - Handler is an async function receiving `player`
 
