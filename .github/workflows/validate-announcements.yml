@@ -1,0 +1,14 @@
+name: Validate announcements JSON
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check announcements JSON
+        run: python3 -m json.tool docs/announcements.json > /dev/null
