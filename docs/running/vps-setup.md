@@ -302,6 +302,8 @@ uproot@server:~$ sudo certbot renew --dry-run
 
 ### Configure nginx
 
+You can also [download a complete nginx.conf](../assets/nginx.conf){ download="nginx.conf" } with the same settings and the outer `events` and `http` blocks included. To use it, follow its `TODO` comments, back up `/etc/nginx/nginx.conf`, and replace that file with the edited download. Then run `sudo nginx -t && sudo systemctl start nginx`. With this option, skip the site-file steps below: the download defines the whole site and does not load `sites-enabled/` or `conf.d/`.
+
 Remove the default site and create the uproot configuration:
 
 ```console
