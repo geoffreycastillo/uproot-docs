@@ -328,11 +328,16 @@ server {
     server_name example.com;
 
     listen 443 ssl;
-    listen 443 quic;
     listen [::]:443 ssl;
-    listen [::]:443 quic;
+
+    listen 443 quic reuseport;
+    listen [::]:443 quic reuseport;
+
     http2 on;
-    add_header Alt-Svc 'h3=":443"; ma=86400';
+    http3 on;
+
+    # nginx 1.26: repeat this header in any location with its own add_header.
+    add_header Alt-Svc 'h3=":443"; ma=86400' always;
 
     ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
@@ -363,6 +368,10 @@ server {
     }
 }
 ```
+
+The `quic` and `http3` lines turn on [HTTP/3](https://developer.mozilla.org/en-US/docs/Glossary/HTTP_3), a newer version of the web protocol that runs over [QUIC](https://nginx.org/en/docs/quic.html) and keeps connections stable on unreliable networks, such as phones switching between Wi-Fi and mobile data. The `Alt-Svc` header tells browsers that HTTP/3 is available. Browsers that cannot use it, or networks that block it, fall back to HTTP/2 automatically, so participants never notice a difference.
+
+`reuseport` makes sure that all of a participant’s QUIC traffic reaches the same nginx process. Without it, nginx’s processes share incoming traffic, and a process that receives traffic for a connection it does not handle resets that connection, so HTTP/3 fails at random.
 
 Enable the site and start nginx:
 

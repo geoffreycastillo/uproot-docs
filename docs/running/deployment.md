@@ -100,11 +100,16 @@ server {
     server_name example.com;  # Adjust this
 
     listen 443 ssl;
-    listen 443 quic;
     listen [::]:443 ssl;
-    listen [::]:443 quic;
+
+    listen 443 quic reuseport;  # See below
+    listen [::]:443 quic reuseport;  # See below
+
     http2 on;
-    add_header Alt-Svc 'h3=":443"; ma=86400';
+    http3 on;
+
+    # nginx 1.26: repeat this header in any location with its own add_header.
+    add_header Alt-Svc 'h3=":443"; ma=86400' always;
 
     ssl_certificate PATH_TO_fullchain.pem;  # Adjust this
     ssl_certificate_key PATH_TO_privkey.pem;  # Adjust this
@@ -135,6 +140,8 @@ server {
     }
 }
 ```
+
+The `quic` and `http3` lines enable [HTTP/3](https://nginx.org/en/docs/quic.html). Browsers that cannot use it fall back to HTTP/2 automatically. `reuseport` makes sure that all of a connection’s QUIC traffic reaches the same nginx process; without it, nginx processes reset connections they do not handle, and HTTP/3 fails at random.
 
 ### Hosting in a subdirectory
 
