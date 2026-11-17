@@ -120,20 +120,20 @@ The built-in templates also read a few optional Jinja variables. Set them near t
 | `buttons` | `True` | Set to `False` to hide the default Back/Next buttons (see [Placing the buttons yourself](#placing-the-buttons-yourself)) |
 | `disable_bootstrap` | `False` | Do not load uproot’s bundled Bootstrap CSS and JavaScript |
 | `disable_alpinejs` | `False` | Do not load [Alpine.js](alpinejs.md); uproot’s built-in participant pages work without it |
-| `disable_uproot_fonts` | `False` | Do not load uproot’s bundled web fonts |
+| `disable_uproot_fonts` | `False` | Do not load uproot’s bundled web fonts, including the tabular-number stylesheet |
 | `disable_tabular_numbers` | `False` | Do not load the tabular-number stylesheet, which makes all digits the same width |
 | `disable_terms` | `False` | Do not load the [translations](#translations) for JavaScript |
 | `disable_auto_start` | `False` | Do not run the default `uproot.init()` and WebSocket startup hook |
 | `disable_connection_lost_modal`{ .text-nowrap } | `False` | Do not show or enable the connection-lost modal |
 
-For admin templates that extend the built-in admin layout, `disable_navigation = True` hides the admin navigation bar.
+For admin templates that extend the built-in admin layout, `disable_navigation = True` hides the admin navigation bar. It is an admin-only switch and cannot go in `TEMPLATE_DEFAULTS`.
 
 To change a switch on every page at once, see [Changing a switch for the whole project](#changing-a-switch-for-the-whole-project).
 
 !!! warning "Two switches can break your study"
     `disable_auto_start` is for pages outside an experiment, such as uproot’s own “No more spots available” page. Do not use it on experiment pages: **Next** stops working, without an error, and so do [live methods](live-methods.md) and [chat](../multiplayer/chat.md).
 
-    `disable_bootstrap` also removes what uproot itself needs. The text of pop-up windows, such as “Connection lost,” appears on the page, pop-up windows do not open, and [slider fields](forms.md#scales-and-sliders) cause a JavaScript error. Use it only if you load [Bootstrap 5](https://getbootstrap.com/docs/5.3/) yourself.
+    `disable_bootstrap` also removes what uproot itself needs. The text of pop-up windows, such as “Connection lost,” appears on the page, pop-up windows do not open, and [slider fields](forms.md#scales-and-sliders) with popovers cause a JavaScript error. Use it only if you load [Bootstrap 5](https://getbootstrap.com/docs/5.3/) yourself.
 
 ### Adding a form
 
@@ -591,12 +591,14 @@ const maxTrades = uproot.vars.max_trades;
 
 ## Changing a switch for the whole project
 
-A [switch](#base-template-switches) set in a template applies to that template only. Sometimes you want the same value everywhere, for example because your study uses its own fonts. Set it once in `main.py` with `upd.TEMPLATE_DEFAULTS`, a [dictionary](https://docs.python.org/3/tutorial/datastructures.html#dictionaries) of default values:
+A [switch](#base-template-switches) set in a template applies to that template and any templates that extend it. Sometimes you want the same value everywhere, for example because your study uses its own fonts. Set it once in [`main.py`](../getting-started/project-structure.md#the-mainpy-file) with `upd.TEMPLATE_DEFAULTS`, a [dictionary](https://docs.python.org/3/tutorial/datastructures.html#dictionaries) of default values. Add these lines before the final `if __name__ == "__main__":` block:
 
 ```python
 upd.TEMPLATE_DEFAULTS["disable_uproot_fonts"] = True
 upd.TEMPLATE_DEFAULTS["disable_alpinejs"] = True
 ```
+
+The `upd` name is already imported in the generated `main.py`.
 
 These defaults apply to every participant page, including built-in pages such as wait pages. Admin pages ignore them, apart from `buddy_sender`. Choose project-wide values with care: with `buttons` set to `False`, for example, every page needs its own way forward.
 
@@ -609,12 +611,27 @@ A single page can still differ from the default. uproot uses the first value it 
 2. a variable of the same name returned by [`templatevars`](#the-templatevars-method);
 3. `upd.TEMPLATE_DEFAULTS`.
 
-So this template loads Alpine.js even though the example above disables it for the project:
+For example, this page loads Alpine.js even though the example above disables it for the project:
+
+```python
+class Instructions(Page):
+    @classmethod
+    def templatevars(page, player):
+        return dict(disable_alpinejs=False)
+```
+
+Alternatively, set the variable in the page’s template (`Instructions.html`):
 
 ```html+jinja
 {% extends "Base.html" %}
 {% set disable_alpinejs = False %}
+
+{% block main %}
+<p>Please read the instructions before continuing.</p>
+{% endblock %}
 ```
+
+Built-in templates can also set their own values. For example, the [end page](#the-end-page) hides navigation buttons even though the project default for `buttons` is `True`.
 
 `upd.TEMPLATE_DEFAULTS` also has three switches for the admin chat. They hold text rather than `True` or `False`. The default, `None`, keeps uproot’s built-in text or image. See [Changing how the experimenter appears](../running/admin.md#changing-how-the-experimenter-appears) for examples.
 
@@ -631,7 +648,9 @@ So this template loads Alpine.js even though the example above disables it for t
     - a value has the wrong type, for example `"yes"` or `1` instead of `True`;
     - a switch is missing.
 
-    So change single values, as shown above. Do not assign a new dictionary containing only some of the switches. A typo in a `{% set %}` line is not caught: the switch simply has no effect.
+    Use Python `True` or `False` for the layout switches. The three `buddy_*` entries accept strings or `None`.
+
+    Change individual entries as shown above, or use `upd.TEMPLATE_DEFAULTS.update()` to change several at once. Do not assign a new dictionary containing only some of the switches. Keep other template variables in `templatevars` or in the template itself. A typo in a `{% set %}` line is not caught: the switch simply has no effect.
 
 ## Complete example
 

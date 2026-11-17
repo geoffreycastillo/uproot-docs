@@ -107,6 +107,10 @@ If your study does not use Alpine.js, you can stop loading it:
 ```html+jinja
 {% extends "Base.html" %}
 {% set disable_alpinejs = True %}
+
+{% block main %}
+<p>This page uses no Alpine.js directives.</p>
+{% endblock %}
 ```
 
 uproot’s built-in participant pages work without it. To disable it on every page, see [Changing a switch for the whole project](pages.md#changing-a-switch-for-the-whole-project).

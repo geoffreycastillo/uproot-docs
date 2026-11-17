@@ -1,5 +1,5 @@
 ---
-description: Use the admin interface to create sessions, monitor and manage participants, chat with them, test apps with simulated responses, and back up the database.
+description: Use the admin interface to create sessions, monitor and manage participants, customize researcher chat, test apps with simulated responses, and back up the database.
 ---
 
 # The admin interface
@@ -206,7 +206,7 @@ Participants see a small button in the bottom-left corner. Messages from the exp
 
 ### Changing how the experimenter appears
 
-By default, the chat button and the title of the chat window say “Chat with Research Coordinator.” Your messages appear under the name “Research Coordinator.” Your lab may use another name, such as “Lab assistants.” To change both, add these lines to `main.py`:
+By default, the chat button and the title of the chat window say “Chat with Research Coordinator.” Your messages appear under the name “Research Coordinator.” Your lab may use another name, such as “Lab assistants.” To change both, add these lines to `main.py` before the final `if __name__ == "__main__":` block:
 
 ```python
 upd.TEMPLATE_DEFAULTS["buddy_label"] = "Chat with the lab assistants"
@@ -227,6 +227,8 @@ To replace the image on the chat button, put a file in the [`_static/` folder at
 ```python
 upd.TEMPLATE_DEFAULTS["buddy_image"] = "lab-logo.png"
 ```
+
+Give the file name relative to `_static/`, without the `_static/` prefix. uproot looks in the current app’s `_static/` directory first, then in the project’s `_static/` directory. Set `buddy_image` back to `None` to use the built-in image.
 
 uproot shows the image at its original size, so use a small one. The built-in image is 80 × 80 pixels. uproot does not check that the file exists: if the name is wrong, participants see a broken image.
 

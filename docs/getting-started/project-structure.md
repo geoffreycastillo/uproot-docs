@@ -1,5 +1,5 @@
 ---
-description: 'Layout of an uproot project: main.py, app modules, templates, _static files, the database, and environment variables.'
+description: 'Layout of an uproot project: main.py configuration and template defaults, app modules, templates, _static files, the database, and environment variables.'
 ---
 
 # Project structure
@@ -111,6 +111,8 @@ upd.DEFAULT_ROOMS.append(
 Rooms defined this way are created automatically when the server starts.
 
 ### Template defaults
+
+To stop loading uproot’s bundled fonts across all apps, add this before the final `if __name__ == "__main__":` block:
 
 ```python
 upd.TEMPLATE_DEFAULTS["disable_uproot_fonts"] = True
