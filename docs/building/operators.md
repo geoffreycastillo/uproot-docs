@@ -316,7 +316,9 @@ uproot calls [`new_player`](data.md#new_player) once for each participant, when 
 !!! warning "Assign the condition in `new_player`, not on a page"
     uproot calls `page_order` before any of the participant’s pages run. If you assign `player.condition` on a page, it does not exist yet when `page_order` reads it, and uproot stops with an `AttributeError`.
 
-    If you prefer to assign the condition on a page, keep `page_order` a fixed list. Then give each condition’s pages a [`show` method](pages.md#conditional-page-display) that checks `player.condition`. The `treatments_balanced` example linked below works this way.
+    If you prefer to assign the condition on a page, keep `page_order` a fixed list. Then give each condition’s pages a [`show` method](pages.md#conditional-page-display) that checks `player.condition`.
+
+The `treatments_balanced` example linked below assigns treatments on a page and displays each participant’s assigned treatment.
 
 [:material-github: See the treatments_balanced example](https://github.com/mrpg/uproot-examples/tree/main/treatments_balanced)
 
