@@ -1,5 +1,5 @@
 ---
-description: 'SmoothOperators control the page order: RandomOrder, Bracket, Rounds, Repeat, and Between for randomization, repetition, and between-subjects designs.'
+description: 'SmoothOperators control the page order: RandomOrder, Bracket, Rounds, Repeat, and Between for randomization, repetition, and between-subjects designs, plus how to balance orders and conditions across participants.'
 ---
 
 # SmoothOperators
@@ -8,7 +8,7 @@ SmoothOperators let you define dynamic page sequences that adapt at runtime. Ins
 
 ## RandomOrder
 
-`RandomOrder` shuffles pages into a random order for each participant. This is essential for counterbalancing in within-subjects designs.
+`RandomOrder` shuffles pages into a random order for each participant. This is useful in within-subjects designs, where the order of tasks could affect your results. Each participant’s order is drawn independently, so `RandomOrder` does not guarantee that every order is equally common. If you need that, see [Balancing orders across participants](#balancing-orders-across-participants).
 
 ```python
 page_order = [
@@ -68,6 +68,40 @@ page_order = [
 ```
 
 [:material-github: See the randomize_apps example](https://github.com/mrpg/uproot-examples/tree/main/randomize_apps)
+
+### Balancing orders across participants
+
+With many participants, `RandomOrder` gives every order about equally often. With few participants, as in a pilot, some orders can be much more common than others by chance. To keep the orders balanced, give each new participant the order that the fewest participants in the session have had so far.
+
+`RandomOrder` cannot do this, but a [`page_order` function](pages.md#the-page_order-list) can:
+
+```python
+from collections import Counter
+from itertools import permutations
+
+ORDERS = list(permutations([TaskA, TaskB, TaskC]))
+
+
+def page_order(player):
+    if player.get("order") is None:
+        counts = Counter(p.get("order") for p in player.session.players)
+        player.order = min(
+            rng().sample(range(len(ORDERS)), len(ORDERS)),
+            key=lambda i: counts[i],
+        )
+
+    return [Instructions, *ORDERS[player.order], Results]
+```
+
+`ORDERS` lists all six orders of the three tasks. uproot calls `page_order` when a participant starts. The function counts how often each order was given in the session, and stores the least common one in `player.order` as a number from 0 to 5. That number ends up in your data. It is the position of the order in `ORDERS`, counting from 0. `permutations` lists the orders as (TaskA, TaskB, TaskC), (TaskA, TaskC, TaskB), (TaskB, TaskA, TaskC), and so on. So 0 stands for TaskA, TaskB, TaskC, and 1 for TaskA, TaskC, TaskB. The check `player.get("order") is None` makes sure a participant keeps their order once it is chosen.
+
+`rng().sample(...)` shuffles the candidate orders before `min` picks one (see [Random numbers](data.md#random-numbers)). When several orders are equally rare, the choice between them is then random. Without the shuffle, `min` would always take the first of them, and every session would hand out the orders in the same sequence.
+
+Use `p.get("order")` here, not `p.order`. A session can contain players who have not started yet, and they have no `order` field.
+
+The example linked below also shows how to set target shares for each order, how to leave out dropouts, and how to balance orders within each treatment.
+
+[:material-github: See the balanced_page_order example](https://github.com/mrpg/uproot-examples/tree/main/balanced_page_order)
 
 ## Rounds
 
@@ -209,7 +243,7 @@ page_order = [
 ]
 ```
 
-Each participant sees exactly one of the three condition pages.
+Each participant sees exactly one of the three condition pages. Each participant’s condition is drawn independently, so `Between` does not guarantee that every condition gets the same number of participants. If you need that, see [Balancing conditions across participants](#balancing-conditions-across-participants).
 
 ### Selecting between page groups
 
@@ -251,6 +285,40 @@ Two details matter when you nest operators:
 
 - If the selected option contains another `Between`, that inner `Between` adds its own entry, and the outer entry leaves out the inner one’s pages. With `Between(Between(A, B), C)`, a participant who sees `B` has `[[], ["myapp/B"]]`.
 - An option without pages, such as `Rounds(A, n=0)`, gets an empty entry (`[]`), so that every `Between` a participant went through has an entry.
+
+### Balancing conditions across participants
+
+With many participants, `Between` gives every condition about the same number of participants. With few participants, as in a pilot, the conditions can end up with quite different numbers by chance. To keep them balanced, assign the condition yourself: give each new participant the condition that the fewest participants in the session have so far. Then return that condition’s pages from a [`page_order` function](pages.md#the-page_order-list):
+
+```python
+from collections import Counter
+
+CONDITIONS = ["treatment", "control"]
+
+
+def new_player(player):
+    counts = Counter(p.get("condition") for p in player.session.players)
+    player.condition = min(
+        rng().sample(CONDITIONS, len(CONDITIONS)),
+        key=lambda condition: counts[condition],
+    )
+
+
+def page_order(player):
+    if player.condition == "treatment":
+        return [TreatmentIntro, TreatmentTask, TreatmentDebrief]
+    else:
+        return [ControlIntro, ControlTask, ControlDebrief]
+```
+
+uproot calls [`new_player`](data.md#new_player) once for each participant, when they start. The function counts how often each condition was given in the session, and stores the least common one in `player.condition`. uproot then calls `page_order`, which returns the pages of that condition. As in [Balancing orders across participants](#balancing-orders-across-participants), `rng().sample(...)` breaks ties at random, and `p.get("condition")` avoids an error for players who have not started yet.
+
+!!! warning "Assign the condition in `new_player`, not on a page"
+    uproot calls `page_order` before any of the participant’s pages run. If you assign `player.condition` on a page, it does not exist yet when `page_order` reads it, and uproot stops with an `AttributeError`.
+
+    If you prefer to assign the condition on a page, keep `page_order` a fixed list. Then give each condition’s pages a [`show` method](pages.md#conditional-page-display) that checks `player.condition`. The `treatments_balanced` example linked below works this way.
+
+[:material-github: See the treatments_balanced example](https://github.com/mrpg/uproot-examples/tree/main/treatments_balanced)
 
 ## Combining operators
 
