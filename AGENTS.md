@@ -208,7 +208,7 @@ Using a context manager is always safe, even when not strictly required.
 - `new_player(player)` — once per player init; runs for every app in the config when the player starts, not when they reach the app
 - `restart()` — on server restart (can be async)
 - `digest(session)` — data for admin digest view (pair with `AdminDigest.html`, `main` block only)
-- `pipeline(session, data)` — admin-runnable job; return `list[dict]` for a downloadable table; `data` is the posted JSON or `None`
+- `pipeline(session, data)` — admin-runnable job; return `list[dict]` for a downloadable table (columns follow the order of the dict keys); `data` is the posted JSON or `None`
 - `rng()` — OS-seeded `random.Random`; storable on player; prefer over `random`
 - `language(player)` — per-player ISO 639 code; default `upd.LANGUAGE`
 - `page_order` — can be a list or a callable taking `player=` (nested lists are flattened, so SmoothOperators work inside sublists)
