@@ -245,7 +245,7 @@ Using a context manager is always safe, even when not strictly required.
 - Environment vars: `UPROOT_DATABASE`, `UPROOT_SQLITE3`, `UPROOT_POSTGRESQL`, `UPROOT_ORIGIN`, `UPROOT_SUBDIRECTORY`, `UPROOT_API_KEY`
 - `upd.ADMINS["admin"] = ...` (Ellipsis = auto-login on localhost)
 - `upd.LANGUAGE` — `"de"`, `"en"`, `"es"`, `"fr"`, `"ja"`
-- Rooms: `upd.DEFAULT_ROOMS.append(room(name, config=, labels=, capacity=, open=))`; `from_file("labels.txt")` loads labels (one per line, `#` comments); `labels=[]` accepts any non-empty code
+- Rooms: `upd.DEFAULT_ROOMS.append(room(name, config=, labels=, capacity=, open=))`; `from_file("labels.txt")` loads labels (one per line, `#` comments); `labels=[]` accepts any non-empty code; every room or sessionwide URL parameter except `label` is saved in the dict `player.url_parameters` (a re-entering player’s new values overwrite the old ones per key)
 
 ### Data export
 - Every download is a ZIP “briefcase”: one top-level folder named after the session, containing `README.txt`, `DATA_DICTIONARY.json`, `page_times.csv` (or `.jsonl`), `SHA256SUMS`, and one folder per format (`ultralong/`, `sparse/`, `latest/`, optionally `latest_by_<gvar>/`), each split into one file per storage kind (`player.csv`, `group.csv`, `session.csv`, `model.csv`)

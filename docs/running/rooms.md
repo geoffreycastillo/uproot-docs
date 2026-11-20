@@ -184,6 +184,24 @@ https://your-server.com/room/{room_name}/?label=MY_LABEL
 
 This is useful for physical labs (where `MY_LABEL` may be `01` to `32`, the number of cubicles), and online platforms, such as [Prolific](https://prolific.com/) IDs. For Prolific, a room with `labels=[]` works even better. See [Running on Prolific](prolific.md).
 
+### Other URL parameters
+
+Recruitment platforms often add their own parameters to the room URL. For example, Prolific sends the participant’s submission ID, which you need to pay bonuses. uproot saves every URL parameter except `label` in `player.url_parameters`, a dictionary. This works in every room, with or without labels, and for the “Sessionwide URL” that the admin shows under **Player URLs**. For this URL:
+
+```
+https://your-server.com/room/my_room/?label=P01&STUDY_ID=abc&SESSION_ID=xyz
+```
+
+the player’s label is `P01`, and `player.url_parameters` is `{"STUDY_ID": "abc", "SESSION_ID": "xyz"}`. Read a single parameter with `.get()`, which gives `None` if the URL did not contain it:
+
+```python
+submission_id = player.url_parameters.get("SESSION_ID")
+```
+
+uproot saves names and values exactly as they arrive. Some platforms, for example, pass the address to send participants back to when they finish, such as `return_url=https://example.com/finish`. That value stays intact, so you can use it in your final page. A parameter whose name or value is longer than 1,024 characters is left out entirely, rather than saved cut off. Players who did not arrive through a URL with parameters have an empty dictionary.
+
+If a participant opens the room URL again and returns to their existing player (see [Labels](#labels-access-codes)), uproot updates the parameters that the new URL contains and keeps the others. The [data export](export.md) keeps every earlier value, as it does for all fields. In CSV files, `url_parameters` is a single column that holds the dictionary as JSON.
+
 ### Labels and capacity
 
 When a non-empty label list is set but no explicit capacity is configured, the room’s effective capacity equals the number of labels. This means each label can be used by exactly one participant. The special `labels=[]` mode has no implicit capacity; set `capacity=` as well if you need a limit.

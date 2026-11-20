@@ -94,7 +94,7 @@ In your Prolific study, enter the room URL as the study URL, and choose the opti
 https://your-server.com/room/my_study/?label={{%PROLIFIC_PID%}}&STUDY_ID={{%STUDY_ID%}}&SESSION_ID={{%SESSION_ID%}}
 ```
 
-Prolific replaces `{{%PROLIFIC_PID%}}` with each participant’s ID. uproot reads only `label`. The `STUDY_ID` and `SESSION_ID` parameters are harmless, but uproot does not store them, so you can also drop them.
+Prolific replaces `{{%PROLIFIC_PID%}}` with each participant’s ID, `{{%STUDY_ID%}}` with your study’s ID, and `{{%SESSION_ID%}}` with the participant’s submission ID. Despite its name, Prolific’s `SESSION_ID` has nothing to do with uproot sessions. uproot stores the Prolific ID as the player’s `label` and the other two in `player.url_parameters` (see [Other URL parameters](rooms.md#other-url-parameters)). Keep `SESSION_ID` in the URL: you need it to [pay bonuses](#bonus-payments).
 
 Open the URL yourself with a made-up label, such as `?label=TEST1`, to check that everything works before you publish the study. Your test player appears in the session like any other player.
 
@@ -125,7 +125,7 @@ Note `.get('completion_code', 'NOCODE')`: if you forget to set the code, or test
 
 ## Working with the data
 
-Every player’s Prolific ID is stored as their `label`. When you [export your data](export.md), the `label` column lets you [match your experimental data to Prolific’s demographic data](https://researcher-help.prolific.com/en/articles/445210-matching-data-between-prolific-and-your-external-study-software).
+Every player’s Prolific ID is stored as their `label`. When you [export your data](export.md), the `label` column lets you [match your experimental data to Prolific’s demographic data](https://researcher-help.prolific.com/en/articles/445210-matching-data-between-prolific-and-your-external-study-software). The `url_parameters` column holds each player’s study ID and submission ID.
 
 The label check works within one session only. If the same person could take part in two of your studies (for example, a pilot and the main study, each with its own room and session), use [Prolific’s filter that excludes participants of previous studies](https://researcher-help.prolific.com/en/articles/445164-how-can-i-prevent-specific-participants-from-accessing-my-study).
 
@@ -135,22 +135,23 @@ The two recipes below need a bit more code. They are good tasks for a coding age
 
 ### Bonus payments
 
-[Prolific’s bulk bonus form](https://researcher-help.prolific.com/en/articles/445233-how-do-i-send-bonus-payments) takes one line per participant: their Prolific ID and bonus amount, separated by a comma. uproot stores the Prolific ID as `player.label`, so you do not need anything from Prolific to build these lines. Suppose your app saves each participant’s bonus as `player.bonus`. A [pipeline](admin.md#pipeline) exports the participant IDs and amounts:
+[Prolific’s bulk bonus form](https://researcher-help.prolific.com/en/articles/445233-how-do-i-send-bonus-payments) takes one line per participant: their submission ID and bonus amount, separated by a comma. The submission ID is not the Prolific ID, and Prolific rejects bonus lines that use Prolific IDs. Prolific sends the submission ID as `SESSION_ID` in the study URL from [Step 3](#step-3-give-prolific-the-study-url), and uproot saves it in `player.url_parameters`. Suppose your app saves each participant’s bonus as `player.bonus`. A [pipeline](admin.md#pipeline) exports the submission IDs and amounts:
 
 ```python
 def pipeline(session, data=None):
     rows = []
 
     for player in session.players:
+        submission_id = player.url_parameters.get("SESSION_ID")
         bonus = player.within(app=__name__).get("bonus")
 
-        if player.label and bonus:
-            rows.append(dict(prolific_id=player.label, amount=f"{bonus:.2f}"))
+        if submission_id and bonus:
+            rows.append(dict(submission_id=submission_id, amount=f"{bonus:.2f}"))
 
     return rows
 ```
 
-Run the pipeline from the session page in the admin and download its table. In Prolific’s **Bulk actions** → **Bulk bonus payment**, paste one line per bonus as `<prolific_id>,<amount>`, without a header row. Amounts are in your study’s currency.
+Players without a submission ID, such as your own test players, are left out. Run the pipeline from the session page in the admin and download its table. In Prolific’s **Bulk actions** → **Bulk bonus payment**, paste one line per bonus as `<submission_id>,<amount>`, without a header row. Amounts are in your study’s currency.
 
 ### Screen-outs
 
